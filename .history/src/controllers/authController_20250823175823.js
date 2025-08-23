@@ -13,12 +13,14 @@ exports.login = async (req, res) => {
         }
         const user = result.rows[0];
 
+        // Generate access token (expired 1h)
         const accessToken = jwt.sign(
             { id: user.id, email: user.email },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
+        // Generate refresh token (expired 7d)
         const refreshToken = jwt.sign(
             { id: user.id, email: user.email },
             process.env.JWT_SECRET,
