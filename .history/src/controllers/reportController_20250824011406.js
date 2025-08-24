@@ -1,0 +1,84 @@
+const pool = require('../config/db');
+const fs = require('fs');
+const path = require('path');
+
+exports.postAttendance = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const { status, address, type, date, time, leave_type, notes, imageBase64 } = req.body;
+        let result;
+        let imageFileName = null;
+
+        if (status == 1 && imageBase64) {
+            // Buat folder uploads jika belum ada
+            const uploadDir = path.join(__dirname, '..', 'uploads');
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
+            // Nama file unik
+            imageFileName = `attendance_${Date.now()}.jpg`;
+            const imagePath = path.join(uploadDir, imageFileName);
+
+            // Konversi base64 → file
+            const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+            fs.writeFileSync(imagePath, Buffer.from(base64Data, 'base64'));
+        }
+
+        if (status == 1) {
+            result = await pool.query(
+                `INSERT INTO attendance (user_id, status, image, address, type, date, time)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+                [user_id, status, imageFileName, address, type, date, time]
+            );
+
+        } else if (status == 0) {
+            result = await pool.query(
+                `INSERT INTO attendance (user_id, status, leave_type, notes, date)
+                 VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+                [user_id, status, leave_type, notes || '', date]
+            );
+        } else {
+            return res.status(400).json({ code: 400, message: 'Invalid status' });
+        }
+
+        res.json({ code: 200, message: 'Attendance recorded', data: result.rows[0] });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ code: 500, message: 'Server error' });
+    }
+};
+
+
+exports.postAttendance = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const { status, address, type, date, time, leave_type, notes, imageBase64 } = req.body; // tambahkan imageBase64
+        let result;
+
+        if (status == 1) {
+            // Jika ada Base64, simpan langsung sebagai string di DB
+            const imageData = imageBase64 || null;
+
+            result = await pool.query(
+                `INSERT INTO attendance (user_id, status, image, address, type, date, time)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+                [user_id, status, imageData, address, type, date, time]
+            );
+
+        } else if (status == 0) {
+            result = await pool.query(
+                `INSERT INTO attendance (user_id, status, leave_type, notes, date)
+         VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+                [user_id, status, leave_type, notes || '', date]
+            );
+        } else {
+            return res.status(400).json({ code: 400, message: 'Invalid status' });
+        }
+
+        res.json({ code: 200, message: 'Attendance recorded', data: result.rows[0] });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ code: 500, message: 'Server error' });
+    }
+};
