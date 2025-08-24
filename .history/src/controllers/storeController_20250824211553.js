@@ -42,7 +42,6 @@ exports.getStoreById = async (req, res) => {
     }
 };
 
-
 exports.getProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);
     const search = req.query.search || '';
@@ -52,18 +51,15 @@ exports.getProducts = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
-                p.id,
-                p.id AS product_id, 
+                p.id, 
                 p.nama_produk, 
                 p.barcode, 
                 p.image,
-                (p.volume_value::text || ' ' || p.unit) AS volume,
-                sp.id AS store_product_id,
-                sp.available,
+                COALESCE(sp.available, 0) AS available,
                 sp.promo_price,
-                sp.store_id
+                sp.
             FROM products p
-            INNER JOIN store_products sp 
+            LEFT JOIN store_products sp 
               ON sp.product_id = p.id AND sp.store_id = $1
             WHERE p.store_id = $1
               AND (p.nama_produk ILIKE $2 OR p.barcode ILIKE $2)
@@ -76,7 +72,6 @@ exports.getProducts = async (req, res) => {
         res.status(500).json({ code: 500, message: 'Server error' });
     }
 };
-
 
 exports.batchUpdateProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);

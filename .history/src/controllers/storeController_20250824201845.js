@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 
-exports.getStores = async (req, res) => {
+exports.getStoreById = async (req, res) => {
+    const { id } = req.params;
     try {
         const result = await pool.query(
             `
@@ -13,20 +14,27 @@ exports.getStores = async (req, res) => {
                 s.created_at,
                 s.promo_available
             FROM stores s
-            ORDER BY s.nama_toko ASC
-            `
+            WHERE s.id = $1
+            `,
+            [id]
         );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ code: 404, message: 'Store not found' });
+        }
 
         res.json({
             code: 200,
-            message: 'Stores retrieved successfully',
-            data: result.rows
+            message: 'Store details retrieved successfully',
+            data: result.rows[0],
         });
     } catch (err) {
         console.error(err);
         res.status(500).json({ code: 500, message: 'Server error' });
     }
 };
+
+
 
 exports.getStoreById = async (req, res) => {
     const storeId = req.params.id;
@@ -42,7 +50,6 @@ exports.getStoreById = async (req, res) => {
     }
 };
 
-
 exports.getProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);
     const search = req.query.search || '';
@@ -52,31 +59,31 @@ exports.getProducts = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
-                p.id,
-                p.id AS product_id, 
+                p.id, 
                 p.nama_produk, 
                 p.barcode, 
                 p.image,
-                (p.volume_value::text || ' ' || p.unit) AS volume,
-                sp.id AS store_product_id,
-                sp.available,
+                COALESCE(sp.available, 0) AS available,
                 sp.promo_price,
-                sp.store_id
+                sp.volume_ml,
+                sp.normal_price
             FROM products p
-            INNER JOIN store_products sp 
+            LEFT JOIN store_products sp 
               ON sp.product_id = p.id AND sp.store_id = $1
-            WHERE p.store_id = $1
-              AND (p.nama_produk ILIKE $2 OR p.barcode ILIKE $2)
+            WHERE p.nama_produk ILIKE $2 OR p.barcode ILIKE $2
             ORDER BY p.nama_produk ASC
         `, [storeId, `%${search}%`]);
 
-        res.json({ code: 200, message: 'Products retrieved successfully', data: result.rows });
+        res.json({
+            code: 200,
+            message: 'Products retrieved successfully',
+            data: result.rows
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ code: 500, message: 'Server error' });
     }
 };
-
 
 exports.batchUpdateProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);

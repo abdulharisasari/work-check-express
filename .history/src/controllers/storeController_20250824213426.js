@@ -42,6 +42,36 @@ exports.getStoreById = async (req, res) => {
     }
 };
 
+// exports.getProducts = async (req, res) => {
+//     const storeId = parseInt(req.params.id, 10);
+//     const search = req.query.search || '';
+//     if (isNaN(storeId)) {
+//         return res.status(400).json({ code: 400, message: 'Invalid store ID' });
+//     }
+//     try {
+//         const result = await pool.query(`
+//             SELECT 
+//                 p.id, 
+//                 p.nama_produk, 
+//                 p.barcode, 
+//                 p.image,
+//                 COALESCE(sp.available, 0) AS available,
+//                 sp.promo_price,
+//                 sp.
+//             FROM products p
+//             LEFT JOIN store_products sp 
+//               ON sp.product_id = p.id AND sp.store_id = $1
+//             WHERE p.store_id = $1
+//               AND (p.nama_produk ILIKE $2 OR p.barcode ILIKE $2)
+//             ORDER BY p.nama_produk ASC
+//         `, [storeId, `%${search}%`]);
+
+//         res.json({ code: 200, message: 'Products retrieved successfully', data: result.rows });
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ code: 500, message: 'Server error' });
+//     }
+// };
 
 exports.getProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);
@@ -52,7 +82,6 @@ exports.getProducts = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
-                p.id,
                 p.id AS product_id, 
                 p.nama_produk, 
                 p.barcode, 

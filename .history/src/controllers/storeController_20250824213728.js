@@ -52,7 +52,6 @@ exports.getProducts = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
-                p.id,
                 p.id AS product_id, 
                 p.nama_produk, 
                 p.barcode, 

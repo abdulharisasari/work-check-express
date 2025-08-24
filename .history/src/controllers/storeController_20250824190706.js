@@ -1,27 +1,33 @@
 const pool = require('../config/db');
 
 exports.getStores = async (req, res) => {
+    const search = req.query.search || '';
     try {
         const result = await pool.query(
             `
             SELECT
-                s.id,
-                s.nama_toko,
-                s.kode_toko,
-                s.alamat,
-                s.image,
-                s.created_at,
-                s.promo_available
+                s.*,
+                sp.product_name,
+                sp.volume_ml,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM store_products sp2
+                        WHERE sp2.store_id = s.id
+                          AND sp2.available = 1
+                          AND sp2.promo_price IS NOT NULL
+                    ) THEN 1
+                    ELSE 0
+                END AS promo_available
             FROM stores s
+            LEFT JOIN store_products sp ON sp.store_id = s.id
+            WHERE s.nama_toko ILIKE $1 OR s.kode_toko ILIKE $1
             ORDER BY s.nama_toko ASC
-            `
+            `,
+            [`%${search}%`]
         );
 
-        res.json({
-            code: 200,
-            message: 'Stores retrieved successfully',
-            data: result.rows
-        });
+        res.json({ code: 200, message: 'Stores retrieved successfully', data: result.rows });
     } catch (err) {
         console.error(err);
         res.status(500).json({ code: 500, message: 'Server error' });
@@ -42,7 +48,6 @@ exports.getStoreById = async (req, res) => {
     }
 };
 
-
 exports.getProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);
     const search = req.query.search || '';
@@ -52,31 +57,24 @@ exports.getProducts = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
-                p.id,
-                p.id AS product_id, 
+                p.id, 
                 p.nama_produk, 
                 p.barcode, 
                 p.image,
-                (p.volume_value::text || ' ' || p.unit) AS volume,
-                sp.id AS store_product_id,
-                sp.available,
-                sp.promo_price,
-                sp.store_id
+                COALESCE(sp.available, 0) AS available,
+                sp.promo_price
             FROM products p
-            INNER JOIN store_products sp 
+            LEFT JOIN store_products sp 
               ON sp.product_id = p.id AND sp.store_id = $1
-            WHERE p.store_id = $1
-              AND (p.nama_produk ILIKE $2 OR p.barcode ILIKE $2)
+            WHERE p.nama_produk ILIKE $2 OR p.barcode ILIKE $2
             ORDER BY p.nama_produk ASC
         `, [storeId, `%${search}%`]);
-
         res.json({ code: 200, message: 'Products retrieved successfully', data: result.rows });
     } catch (err) {
         console.error(err);
         res.status(500).json({ code: 500, message: 'Server error' });
     }
 };
-
 
 exports.batchUpdateProducts = async (req, res) => {
     const storeId = parseInt(req.params.id, 10);

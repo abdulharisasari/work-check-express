@@ -84,26 +84,10 @@ exports.getPromos = async (req, res) => {
     }
     try {
         const result = await pool.query(
-            `SELECT sp.id AS store_product_id,
-                    sp.promo_price,
-                    sp.available,
-                    sp.created_at,
-                    p.id AS product_id,
-                    p.nama_produk,
-                    p.barcode,
-                    p.image
-             FROM store_products sp
-             JOIN products p ON sp.product_id = p.id
-             WHERE sp.store_id = $1
-             ORDER BY sp.created_at DESC`,
+            `SELECT * FROM store_promos WHERE store_id = $1 ORDER BY created_at DESC`,
             [storeId]
         );
-
-        res.json({
-            code: 200,
-            message: 'Daftar promo berhasil diambil',
-            data: result.rows
-        });
+        res.json({ code: 200, message: 'Daftar promo berhasil diambil', data: result.rows });
     } catch (err) {
         console.error(err);
         res.status(500).json({ code: 500, message: 'Server error' });
