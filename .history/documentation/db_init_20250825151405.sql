@@ -112,7 +112,3 @@ ALTER TABLE IF EXISTS public.store_products
     ON DELETE CASCADE;
 
 END;
-
-
-
-
